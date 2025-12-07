@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一年级汉字书写练习</title>
+    <!-- 引入 Tailwind CSS 进行美化 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Hanzi Writer 核心库 -->
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f9ff;
+            /* 防止移动端下拉刷新干扰写字 */
+            overscroll-behavior: none; 
+        }
+
+        .handwritten-font {
+            font-family: 'ZCOOL KuaiLe', cursive;
+        }
+
+        /* 米字格背景 CSS */
+        .mizige {
+            background-color: #fff;
+            background-image: 
+                linear-gradient(0deg, transparent 49.5%, #ffd1d1 49.5%, #ffd1d1 50.5%, transparent 50.5%),
+                linear-gradient(90deg, transparent 49.5%, #ffd1d1 49.5%, #ffd1d1 50.5%, transparent 50.5%),
+                linear-gradient(45deg, transparent 49.5%, #ffd1d1 49.5%, #ffd1d1 50.5%, transparent 50.5%),
+                linear-gradient(-45deg, transparent 49.5%, #ffd1d1 49.5%, #ffd1d1 50.5%, transparent 50.5%);
+            background-size: 100% 100%;
+            border: 4px solid #ff6b6b;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            transition: all 0.2s;
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* 隐藏滚动条但允许滚动 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col items-center justify-center">
+
+    <!-- 1. 欢迎/输入界面 -->
+    <div id="setup-screen" class="w-full max-w-lg p-6 bg-white rounded-2xl shadow-xl transition-all duration-300">
+        <h1 class="text-3xl font-bold text-center text-blue-600 mb-2 handwritten-font">快乐写汉字</h1>
+        <p class="text-gray-500 text-center mb-6 text-sm">家长请将要练习的汉字粘贴在下面</p>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">输入汉字 (比如: 天地人你我他)</label>
+            <textarea id="input-chars" rows="4" class="w-full p-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:border-blue-500 text-xl tracking-widest" placeholder="在此粘贴..."></textarea>
+        </div>
+
+        <button onclick="startApp()" class="btn w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl text-lg shadow-md">
+            开始练习 🚀
+        </button>
+        
+        <div class="mt-4 text-xs text-gray-400 text-center">
+            * 建议使用 iPad 或 电脑 访问<br>
+            * 即使没有网络，只要缓存过一次也能用
+        </div>
+    </div>
+
+    <!-- 2. 练习界面 (默认隐藏) -->
+    <div id="practice-screen" class="hidden flex-col items-center w-full h-full max-w-2xl p-4">
+        
+        <!-- 顶部导航栏 -->
+        <div class="w-full flex justify-between items-center mb-4 bg-white p-3 rounded-xl shadow-sm">
+            <button onclick="goBack()" class="text-gray-500 hover:text-blue-500 font-bold">
+                ← 返回
+            </button>
+            <div class="text-xl font-bold text-gray-700">
+                第 <span id="current-index" class="text-blue-600">1</span> / <span id="total-count">10</span> 字
+            </div>
+            <div class="w-16"></div> <!-- 占位符保持居中 -->
+        </div>
+
+        <!-- 汉字显示区域 (米字格) -->
+        <div class="relative mb-8">
+            <div id="character-target" class="mizige rounded-xl cursor-crosshair"></div>
+            <!-- 提示信息 -->
+            <div id="feedback-msg" class="absolute -bottom-8 w-full text-center font-bold text-lg h-6 text-orange-500"></div>
+        </div>
+
+        <!-- 控制按钮区：改为3列布局 -->
+        <div class="grid grid-cols-3 gap-3 w-full max-w-md mb-6">
+            <button onclick="animateChar()" class="btn bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow text-sm md:text-base">
+                👀 看演示
+            </button>
+            <button onclick="startTracing()" class="btn bg-orange-400 hover:bg-orange-500 text-white font-bold py-3 rounded-xl shadow text-sm md:text-base">
+                ✏️ 描红
+            </button>
+            <button onclick="startBlindQuiz()" class="btn bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 rounded-xl shadow text-sm md:text-base">
+                🧠 默写
+            </button>
+        </div>
+
+        <!-- 底部切换 -->
+        <div class="flex gap-4 w-full max-w-md">
+            <button onclick="prevChar()" class="btn flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl">
+                上一个
+            </button>
+            <button onclick="nextChar()" class="btn flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg">
+                下一个
+            </button>
+        </div>
+
+        <!-- 字符列表预览 -->
+        <div class="mt-8 w-full overflow-x-auto no-scrollbar">
+            <div id="char-list" class="flex gap-2 justify-center min-w-max p-2">
+                <!-- 动态生成小方块 -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 全局变量
+        let charList = [];
+        let currentIndex = 0;
+        let writer = null;
+
+        // 1. 初始化应用
+        function startApp() {
+            const input = document.getElementById('input-chars').value;
+            // 过滤非中文字符，只保留汉字
+            const cleaned = input.match(/[\u4e00-\u9fa5]/g);
+            
+            if (!cleaned || cleaned.length === 0) {
+                alert("请先输入一些汉字哦！");
+                return;
+            }
+
+            charList = cleaned;
+            currentIndex = 0;
+
+            // 切换界面
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('practice-screen').classList.remove('hidden');
+            document.getElementById('practice-screen').classList.add('flex');
+
+            updateTotalCount();
+            renderCharList();
+            loadCharacter(charList[0]);
+        }
+
+        function goBack() {
+            document.getElementById('practice-screen').classList.add('hidden');
+            document.getElementById('practice-screen').classList.remove('hidden');
+            document.getElementById('practice-screen').classList.remove('flex');
+            document.getElementById('setup-screen').classList.remove('hidden');
+        }
+
+        // 2. 加载汉字核心逻辑
+        function loadCharacter(char) {
+            const container = document.getElementById('character-target');
+            container.innerHTML = ''; // 清空以前的
+            setFeedback("");
+            document.getElementById('current-index').innerText = currentIndex + 1;
+
+            // 计算容器大小（响应式）
+            const size = Math.min(window.innerWidth - 40, 300);
+            container.style.width = size + 'px';
+            container.style.height = size + 'px';
+
+            // 初始化 HanziWriter
+            writer = HanziWriter.create('character-target', char, {
+                width: size,
+                height: size,
+                padding: 10,
+                showOutline: true,
+                strokeAnimationSpeed: 1.5, // 演示稍微快一点
+                delayBetweenStrokes: 150,
+                strokeColor: '#333333',
+                radicalColor: '#168F16', // 部首颜色
+                outlineColor: '#DDD',
+                drawingWidth: 25, // 手写时笔画粗一点
+                showHintAfterMisses: 1, // 写错1次后提示
+                highlightOnComplete: true, // 写完闪烁奖励
+            });
+
+            // 默认进来播放一次动画
+            writer.animateCharacter();
+            highlightCurrentListChar();
+        }
+
+        // 3. 动画演示
+        function animateChar() {
+            if(writer) {
+                writer.showOutline(); // 确保显示轮廓
+                writer.animateCharacter();
+                setFeedback("认真看笔画顺序哦~", "text-green-500");
+            }
+        }
+
+        // 4. 描红模式（有背景）
+        function startTracing() {
+            if(writer) {
+                writer.showOutline(); // 确保显示轮廓
+                setFeedback("跟着灰色背景写...", "text-orange-500");
+                
+                runQuiz("描红");
+            }
+        }
+
+        // 5. 默写模式（无背景）- 新增功能
+        function startBlindQuiz() {
+            if(writer) {
+                writer.hideOutline(); // 隐藏轮廓
+                setFeedback("凭记忆默写...", "text-purple-600");
+                
+                runQuiz("默写");
+            }
+        }
+
+        // 通用测验逻辑
+        function runQuiz(modeName) {
+            writer.quiz({
+                onMistake: function(strokeData) {
+                    setFeedback("哎呀，笔画不对，再想想！", "text-red-500");
+                },
+                onCorrectStroke: function(strokeData) {
+                    setFeedback("写对了！", "text-blue-500");
+                },
+                onComplete: function(summaryData) {
+                    setFeedback(`太棒了！${modeName}成功！🎉`, "text-green-600");
+                    // 默写完成后，显示出原字，给孩子对比一下
+                    setTimeout(() => {
+                        writer.showOutline();
+                    }, 500);
+                }
+            });
+        }
+
+        // 辅助：设置提示文字
+        function setFeedback(text, colorClass) {
+            const el = document.getElementById('feedback-msg');
+            el.innerText = text;
+            // 清除旧颜色，保留基础布局
+            el.className = `absolute -bottom-8 w-full text-center font-bold text-lg h-6 ${colorClass || 'text-gray-500'}`;
+        }
+
+        // 6. 导航逻辑
+        function nextChar() {
+            if (currentIndex < charList.length - 1) {
+                currentIndex++;
+                loadCharacter(charList[currentIndex]);
+            } else {
+                alert("已经是最后一个字啦！");
+            }
+        }
+
+        function prevChar() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                loadCharacter(charList[currentIndex]);
+            }
+        }
+
+        function jumpToChar(index) {
+            currentIndex = index;
+            loadCharacter(charList[currentIndex]);
+        }
+
+        function updateTotalCount() {
+            document.getElementById('total-count').innerText = charList.length;
+        }
+
+        function renderCharList() {
+            const listDiv = document.getElementById('char-list');
+            listDiv.innerHTML = '';
+            charList.forEach((char, index) => {
+                const span = document.createElement('span');
+                span.innerText = char;
+                span.className = `w-8 h-8 flex items-center justify-center bg-white rounded border cursor-pointer hover:bg-blue-100 transition-colors select-none char-item-${index}`;
+                span.onclick = () => jumpToChar(index);
+                listDiv.appendChild(span);
+            });
+        }
+
+        function highlightCurrentListChar() {
+            document.querySelectorAll('#char-list span').forEach(el => {
+                el.classList.remove('bg-blue-500', 'text-white');
+                el.classList.add('bg-white', 'text-black');
+            });
+            const current = document.querySelector(`.char-item-${currentIndex}`);
+            if(current) {
+                current.classList.remove('bg-white');
+                current.classList.add('bg-blue-500', 'text-white');
+                current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            }
+        }
+
+        // 预设方便测试
+        document.getElementById('input-chars').value = "天地人你我他写字真快乐";
+    </script>
+</body>
+</html>
